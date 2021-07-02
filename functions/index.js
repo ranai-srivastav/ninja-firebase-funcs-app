@@ -1,77 +1,80 @@
-/* eslint-disable no-trailing-spaces */
-/* eslint-disable quotes */
+/* eslint-disable no-multi-spaces */
 /* eslint-disable max-len */
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
+
+const functions = require("firebase-functions");    // firebase functions: Gives access to functions
+const admin = require("firebase-admin");            // firebase admin: WHAT EXACTLY IS THIS USED FOR (Used to access things in the database)
 admin.initializeApp();
 
-// auth trigger on new user signp
+// auth trigger on new user signp. AUtomatic function
 exports.newUserSignup = functions.auth.user().onCreate((user) => {
-  // console.log('user created', user.email, user.uid);
-  return admin.firestore().collection('users').doc(user.uid).set({
+  // console.log("user created", user.email, user.uid);
+  return admin.firestore().collection("users").doc(user.uid).set({  // promise
     email: user.email,
     upvotedOn: [],
   });
 });
 
-
+// automatic function that gets called when a a user is deleted.
+// This functions uses the admin sdk to access a collection and delete the corresponding doc
+// when a user account is deleted from auth
 exports.userDeleted = functions.auth.user().onDelete((user) => {
-  // console.log('user deleted', user.email, user.uid);
-  const doc = admin.firestore().collection('users').doc(user.uid);
+  // console.log("user deleted", user.email, user.uid);
+  const doc = admin.firestore().collection("users").doc(user.uid);
   return doc.delete();
 });
 
-// http callable
+// http callable function. Called using the functions library
 exports.addRequest = functions.https.onCall((data, context) => {
   if (!context.auth) {
-    throw new functions.https.HttpsError(
-        'unauthenticated',
-        'Only authenticated users can add requests'
+    throw new functions.https.HttpsError(           // throws a https error. Theres a list of google given codes.
+        "unauthenticated",                          // The first one is the google code and the second one
+        "Only authenticated users can add requests" // is generated message accessible through error.message
     );
   }
 
   if (data.text.length > 30) {
     throw new functions.https.HttpsError(
-        'invalid-argument',
-        'request must be no more than 30 chars long'
+        "invalid-argument",
+        "request must be no more than 30 chars long"
     );
   }
 
-  return admin.firestore().collection('requests').add({
+  return admin.firestore().collection("requests").add({
     text: data.text,
     upvote: 0,
   });
 });
 
 // data object will be given by whatever calls. It has an id proprty of the request we want to update. Look at vue code in requests.js
-exports.upvote = functions.https.onCall( (data, context) => {
-  if (!context.auth) {
+exports.upvote = functions.https.onCall( (data, cont) => {
+  if (!cont.auth) {
     throw new functions.https.HttpsError(
-        'unauthenticated',
-        'Only authenticated users can add requests'
+        "unauthenticated",
+        "Only authenticated users can add requests"
     );
   }
 
-  // getting the references
-  const user = admin.firestore().collection(`users`).doc(context.auth.uid);
-  const request = admin.firestore().collection(`requests`).doc(data.id);
+  // getting the references                                                         // HOW DOES THIS FUNCTION HAVE MULTIPLE RETURN STATEMENTS. WHY?
+  const user = admin.firestore().collection("users").doc(cont.auth.uid);
+  const request = admin.firestore().collection("requests").doc(data.id);
 
 
-  // checking doble upvotes
+  // checking doble upvotes. If the list of users upvoted documents has the document if of the document
+  // that this function was called on, then BAD
   return user.get().then((doc) => {
     if (doc.data().upvotedOn.includes(data.id)) {
       throw new functions.https.HttpsError(
-          'failed-precondition',
-          'You can only upvote once'
+          "failed-precondition",
+          "You can only upvote once"
       );
     }
 
     return user.update({
-      upvotedOn: [...doc.data().upvotedOn, data.id],
+      upvotedOn: [...doc.data().upvotedOn, data.id],    // What is ... operator? The spread operator
     }).then( () => {
       // update votes on the request
       return request.update({
-        upvote: admin.firestore().FieldValue.increment(1),
+        upvote: admin.firestore.FieldValue.increment(1),
       });
     });
   });
