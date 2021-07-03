@@ -59,6 +59,7 @@ exports.upvote = functions.https.onCall((data, context) => {
 
   return user.get().then((doc) => {
     // check thew user hasn't already upvoted
+    console.log(doc.data());
     if (doc.data().upvotedOn.includes(data.id)) {
       throw new functions.https.HttpsError(
           "failed-precondition",
@@ -73,7 +74,7 @@ exports.upvote = functions.https.onCall((data, context) => {
         .then(() => {
           // update the votes on the request
           return request.update({
-            upvotes: admin.firestore.FieldValue.increment(1),
+            upvote: admin.firestore.FieldValue.increment(1),
           });
         });
   });
