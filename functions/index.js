@@ -45,57 +45,91 @@ exports.addRequest = functions.https.onCall((data, context) => {
   });
 });
 
-// data object will be given by whatever calls. It has an id proprty of the request we want to update. Look at vue code in requests.js
-exports.upvote = functions.https.onCall( (data, cont) => {
-  if (!cont.auth) {
+exports.upvote = functions.https.onCall((data, context) => {
+  // check auth state
+  if (!context.auth) {
     throw new functions.https.HttpsError(
         "unauthenticated",
-        "Only authenticated users can add requests"
+        "only authenticated users can vote up requests"
     );
   }
-
-  // getting the references                                                         // HOW DOES THIS FUNCTION HAVE MULTIPLE RETURN STATEMENTS. WHY?
-  const user = admin.firestore().collection("users").doc(cont.auth.uid);
+  // get refs for user doc & request doc
+  const user = admin.firestore().collection("users").doc(context.auth.uid);
   const request = admin.firestore().collection("requests").doc(data.id);
 
-
-  // checking doble upvotes. If the list of users upvoted documents has the document if of the document
-  // that this function was called on, then BAD
   return user.get().then((doc) => {
+    // check thew user hasn't already upvoted
     if (doc.data().upvotedOn.includes(data.id)) {
       throw new functions.https.HttpsError(
           "failed-precondition",
-          "You can only upvote once"
+          "You can only vote something up once"
       );
     }
 
+    // update the array in user document
     return user.update({
-      upvotedOn: [...doc.data().upvotedOn, data.id],    // What is ... operator? The spread operator
-    }).then( () => {
-      // update votes on the request
-      return request.update({
-        upvote: admin.firestore.FieldValue.increment(1),
-      });
-    });
+      upvotedOn: [...doc.data().upvotedOn, data.id],
+    })
+        .then(() => {
+          // update the votes on the request
+          return request.update({
+            upvotes: admin.firestore.FieldValue.increment(1),
+          });
+        });
   });
 });
 
-// // http request
-// exports.randomNumber = functions.https.onRequest((req, res) => {
-//   const number = Math.round(Math.random() * 100);
-//   res.send(number.toString());
+// data object will be given by whatever calls. It has an id proprty of the request we want to update. Look at vue code in requests.js
+// exports.upvote = functions.https.onCall( (data, cont) => {
+//   if (!cont.auth) {
+//     throw new functions.https.HttpsError(
+//         "unauthenticated",
+//         "Only authenticated users can add requests"
+//     );
+//   }
+
+//   // getting the references                                                         // HOW DOES THIS FUNCTION HAVE MULTIPLE RETURN STATEMENTS. WHY?
+//   const user = admin.firestore().collection("users").doc(cont.auth.uid);
+//   const request = admin.firestore().collection("requests").doc(data.id);
+
+
+//   // checking doble upvotes. If the list of users upvoted documents has the document if of the document
+//   // that this function was called on, then BAD
+//   return user.get().then((doc) => {
+//     if (doc.data().upvotedOn.includes(data.id)) {
+//       throw new functions.https.HttpsError(
+//           "failed-precondition",
+//           "You can only upvote once"
+//       );
+//     }
+
+//     return user.update({
+//       upvotedOn: [...doc.data().upvotedOn, data.id],    // What is ... operator? The spread operator
+//     }).then( () => {
+//       // update votes on the request
+//       return request.update({
+//         upvote: admin.firestore.FieldValue.increment(1),
+//       });
+//     });
+//   });
 // });
 
-// exports.toTheDojo = functions.https.onRequest((req, res) => {
-//   res.redirect("https://ranaisrivastav.wixsite.com/aboutme");
-// });
+// http request
+exports.randomNumber = functions.https.onRequest((req, res) => {
+  const number = Math.round(Math.random() * 100);
+  res.send(number.toString());
+});
 
-// // http callable
-// exports.sayHello = functions.https.onCall((data, context) => {
-//   const name = data.name;
+exports.toTheDojo = functions.https.onRequest((req, res) => {
+  res.redirect("https://ranaisrivastav.wixsite.com/aboutme");
+});
 
-//   return `Hello, ${name}`;
-// });
+// http callable
+exports.sayHello = functions.https.onCall((data, context) => {
+  const name = data.name;
+
+  return `Hello, ${name}`;
+});
 
 // Create and Deploy Your First Cloud Functions
 // https://firebase.google.com/docs/functions/write-firebase-functions

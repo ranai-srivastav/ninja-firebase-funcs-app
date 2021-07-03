@@ -18,46 +18,43 @@ authSwitchLinks.forEach((link) => {
 //register form
 registerForm.addEventListener('submit', (event) => {
     event.preventDefault();
-    
+
     const email = registerForm.email.value;
     const password = registerForm.password.value;
 
     firebase.auth().createUserWithEmailAndPassword(email, password)
-      .then((user) => {
-          console.log('registered', user)
-          registerForm.reset();
-      }).catch((error) => {
-          registerForm.querySelector('error').textContent = error.message;
-      });
+        .then((user) => {
+            console.log('registered', user)
+            registerForm.reset();
+        }).catch((error) => {
+        registerForm.querySelector('error').textContent = error.message;
+    });
 });
 
 
 //login form
 loginForm.addEventListener('submit', (event) => {
     event.preventDefault();
-    
+
     const email = loginForm.email.value;
     const password = loginForm.password.value;
 
     firebase.auth().signInWithEmailAndPassword(email, password)
-      .then((user) => {
-          console.log('logged in', user)
-          loginForm.reset();
-      }).catch((error) => {
-          loginForm.querySelector('.error').textContent = error.message;
-      });
+        .then((user) => {
+            console.log('logged in', user)
+            loginForm.reset();
+        }).catch((error) => {
+        loginForm.querySelector('.error').textContent = error.message;
+    });
 });
 
 // auth listner
 
 firebase.auth().onAuthStateChanged((user) => {
-    if(user)
-    {
+    if (user) {
         authWrapper.classList.remove('open');
-        authModals.forEach( modal => modal.classList.remove('active'));
-    }
-    else 
-    {
+        authModals.forEach(modal => modal.classList.remove('active'));
+    } else {
         authWrapper.classList.add('open');
         authModals[0].classList.add('active');
     }
@@ -67,7 +64,7 @@ firebase.auth().onAuthStateChanged((user) => {
 
 signOut.addEventListener('click', () => {
     firebase.auth().signOut()
-    .then(() => {
-        console.log('SIGNED OUT');
-    });
+        .then(() => {
+            console.log('SIGNED OUT');
+        });
 });
