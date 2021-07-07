@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 /* eslint-disable no-multi-spaces */
 /* eslint-disable max-len */
 
@@ -28,14 +29,14 @@ exports.addRequest = functions.https.onCall((data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError(           // throws a https error. Theres a list of google given codes.
         "unauthenticated",                          // The first one is the google code and the second one
-        "Only authenticated users can add requests" // is generated message accessible through error.message
+        "Only authenticated users can add requests", // is generated message accessible through error.message
     );
   }
 
   if (data.text.length > 30) {
     throw new functions.https.HttpsError(
         "invalid-argument",
-        "request must be no more than 30 chars long"
+        "request must be no more than 30 chars long",
     );
   }
 
@@ -45,75 +46,73 @@ exports.addRequest = functions.https.onCall((data, context) => {
   });
 });
 
-exports.upvote = functions.https.onCall((data, context) => {
+exports.upvote = functions.https.onCall(async (data, context) => {
   // check auth state
   if (!context.auth) {
     throw new functions.https.HttpsError(
         "unauthenticated",
-        "only authenticated users can vote up requests"
+        "only authenticated users can vote up requests",
     );
   }
   // get refs for user doc & request doc
   const user = admin.firestore().collection("users").doc(context.auth.uid);
   const request = admin.firestore().collection("requests").doc(data.id);
 
-  return user.get().then((doc) => {
-    // check thew user hasn't already upvoted
-    console.log(doc.data());
-    if (doc.data().upvotedOn.includes(data.id)) {
-      throw new functions.https.HttpsError(
-          "failed-precondition",
-          "You can only vote something up once"
-      );
-    }
+  const doc = await user.get();
 
-    // update the array in user document
-    return user.update({
-      upvotedOn: [...doc.data().upvotedOn, data.id],
-    })
-        .then(() => {
-          // update the votes on the request
-          return request.update({
-            upvote: admin.firestore.FieldValue.increment(1),
-          });
-        });
+  // check thew user hasn't already upvoted
+  if (doc.data().upvotedOn.includes(data.id)) {
+    throw new functions.https.HttpsError(
+        "failed-precondition",
+        "You can only vote something up once",
+    );
+  }
+
+  // update the array in user document
+  await user.update({
+    upvotedOn: [...doc.data().upvotedOn, data.id],
+  });
+
+  // update the votes on the request
+  return request.update({
+    upvote: admin.firestore.FieldValue.increment(1),
   });
 });
 
 // data object will be given by whatever calls. It has an id proprty of the request we want to update. Look at vue code in requests.js
-// exports.upvote = functions.https.onCall( (data, cont) => {
-//   if (!cont.auth) {
-//     throw new functions.https.HttpsError(
-//         "unauthenticated",
-//         "Only authenticated users can add requests"
-//     );
-//   }
+exports.upvote = functions.https.onCall( (data, cont) => {
+  if (!cont.auth) {
+    throw new functions.https.HttpsError(
+        "unauthenticated",
+        "Only authenticated users can add requests",
+    );
+  }
 
-//   // getting the references                                                         // HOW DOES THIS FUNCTION HAVE MULTIPLE RETURN STATEMENTS. WHY?
-//   const user = admin.firestore().collection("users").doc(cont.auth.uid);
-//   const request = admin.firestore().collection("requests").doc(data.id);
+  // getting the references                                                         // HOW DOES THIS FUNCTION HAVE MULTIPLE RETURN STATEMENTS. WHY?
+  const user = admin.firestore().collection("users").doc(cont.auth.uid);
+  const request = admin.firestore().collection("requests").doc(data.id);
 
 
-//   // checking doble upvotes. If the list of users upvoted documents has the document if of the document
-//   // that this function was called on, then BAD
-//   return user.get().then((doc) => {
-//     if (doc.data().upvotedOn.includes(data.id)) {
-//       throw new functions.https.HttpsError(
-//           "failed-precondition",
-//           "You can only upvote once"
-//       );
-//     }
+  // checking doble upvotes. If the list of users upvoted documents has the document if of the document
+  // that this function was called on, then BAD
+  return user.get().then((doc) => {
+    if (doc.data().upvotedOn.includes(data.id)) {
+      throw new functions.https.HttpsError(
+          "failed-precondition",
+          "You can only upvote once",
+      );
+    }
 
-//     return user.update({
-//       upvotedOn: [...doc.data().upvotedOn, data.id],    // What is ... operator? The spread operator
-//     }).then( () => {
-//       // update votes on the request
-//       return request.update({
-//         upvote: admin.firestore.FieldValue.increment(1),
-//       });
-//     });
-//   });
-// });
+    return user.update({
+      upvotedOn: [...doc.data().upvotedOn, data.id],    // What is ... operator? The spread operator
+    }).then( () => {
+      // update votes on the request
+      return request.update({
+        upvote: admin.firestore.FieldValue.increment(1),
+      });
+    });
+  });
+});
 
 // http request
 exports.randomNumber = functions.https.onRequest((req, res) => {
@@ -125,12 +124,53 @@ exports.toTheDojo = functions.https.onRequest((req, res) => {
   res.redirect("https://ranaisrivastav.wixsite.com/aboutme");
 });
 
+exports.httpsRequest = functions.https.onRequest((req, res) => {
+  const tut = req.query.text;
+  console.log(tut);
+  const db = admin.firestore().collection("requests");
+  // return db.doc(tut).get().then((doc) => {
+  //   console.log(doc.data());
+  // });
+
+  let requests = [];
+  return db.where("text", "==", tut).get().then((docs) => {
+    docs.forEach((doc) => {
+      requests.push(doc);
+      console.log(requests);
+      res.send(requests);
+    });
+  });
+  // return db.doc(tut).get().then((doc) => {
+  //   console.log("Line 3");
+  //   console.log(doc.data().text);
+  //   console.log("Line 4");
+  // });
+});
+
 // http callable
 exports.sayHello = functions.https.onCall((data, context) => {
   const name = data.name;
 
   return `Hello, ${name}`;
 });
+
+exports.logActivities = functions.firestore.document("/{collection}/{id}")
+    .onCreate( (snap, context) => {
+      const coll = context.params.collection;
+      // const id = context.params.id;
+      const activities = admin.firestore().collection("activities");
+
+
+      if (coll === "requests") {
+        return activities.add({text: "a new tutorial was added to the requests collection"});
+      }
+
+      if (coll === "users") {
+        return activities.add({text: "a new user was added to the database"});
+      }
+
+      return null;
+    });
 
 // Create and Deploy Your First Cloud Functions
 // https://firebase.google.com/docs/functions/write-firebase-functions
