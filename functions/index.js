@@ -4,7 +4,36 @@
 
 const functions = require("firebase-functions");    // firebase functions: Gives access to functions
 const admin = require("firebase-admin");            // firebase admin: WHAT EXACTLY IS THIS USED FOR (Used to access things in the database)
-admin.initializeApp();
+const {google} = require("googleapis");
+admin.initializeApp({
+  credential: admin.credential.applicationDefault(),
+  databaseURL: "www.google.com",
+});
+
+const serviceAccount = require("/home/ranais/Ranai/Intern/ninja-code-trials/funcs/ninja-cloud-funcs-9fe67-firebase-adminsdk-tuoig-cfd97fe834.json");
+
+const scopes = [
+  "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/firebase.database",
+];
+
+const jwtClient = new google.auth.JWT(
+    serviceAccount.client_email,
+    null,
+    serviceAccount.private_key,
+    scopes,
+);
+
+jwtClient.authorize( (error, tokens) => {
+  if (error) {
+    console.log("Error making request to generate access token:", error);
+  } else if (tokens.access_token === null) {
+    console.log("Provided service account does not have permission to generate access tokens");
+  } else {
+    const accessToken = tokens.access_token;
+    console.log(accessToken);
+  }
+});
 
 // auth trigger on new user signp. AUtomatic function
 exports.newUserSignup = functions.auth.user().onCreate((user) => {
@@ -125,27 +154,35 @@ exports.toTheDojo = functions.https.onRequest((req, res) => {
 });
 
 exports.httpsRequest = functions.https.onRequest((req, res) => {
+  const tokenId = req.get("Authorization").split("Bearer")[1];
+  if (tokenId) {
+    console.log("WHOA");
+  }
+
   const tut = req.query.text;
   console.log(tut);
   const db = admin.firestore().collection("requests");
-  // return db.doc(tut).get().then((doc) => {
-  //   console.log(doc.data());
-  // });
 
   let requests = [];
-  return db.where("text", "==", tut).get().then((docs) => {
+  return db.where("text", "==", tut).get().then((docs) => { // if bad query, there is no docs in requests. Check size of requests[]
     docs.forEach((doc) => {
       requests.push(doc);
       console.log(requests);
       res.send(requests);
     });
+  }).catch((error) => {
+    res.send({"error": error});
   });
-  // return db.doc(tut).get().then((doc) => {
-  //   console.log("Line 3");
-  //   console.log(doc.data().text);
-  //   console.log("Line 4");
-  // });
 });
+
+exports.auth = functions.https.onRequest((req, res) => {
+  const tokenId = req.get("Authorization").split("Bearer ")[1];
+
+  return admin.auth().verifyIdToken(tokenId)
+      .then((decoded) => res.status(200).send(decoded))
+      .catch((err) => res.status(401).send(err));
+});
+
 
 // http callable
 exports.sayHello = functions.https.onCall((data, context) => {

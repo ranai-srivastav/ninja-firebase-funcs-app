@@ -64,3 +64,6 @@ node_modules/
 
 # dotenv environment variables file
 .env
+
+#access codes file
+ninja-cloud-funcs-9fe67-firebase-adminsdk-tuoig-cfd97fe834.json
