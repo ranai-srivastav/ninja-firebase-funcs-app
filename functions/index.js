@@ -4,13 +4,14 @@
 
 const functions = require("firebase-functions");    // firebase functions: Gives access to functions
 const admin = require("firebase-admin");            // firebase admin: WHAT EXACTLY IS THIS USED FOR (Used to access things in the database)
-const {google} = require("googleapis");
+const google = require("googleapis");
 admin.initializeApp({
   credential: admin.credential.applicationDefault(),
   databaseURL: "www.google.com",
 });
 
-const serviceAccount = require("/home/ranais/Ranai/Intern/ninja-code-trials/funcs/ninja-cloud-funcs-9fe67-firebase-adminsdk-tuoig-cfd97fe834.json");
+//  client id 796261607594-02v08li2ac9sh36lrqs0t6aqilonn21m.apps.googleusercontent.com
+const serviceAccount = require("./ninja-cloud-funcs-9fe67-firebase-adminsdk-tuoig-cfd97fe834.json");
 
 const scopes = [
   "https://www.googleapis.com/auth/userinfo.email",
@@ -154,7 +155,7 @@ exports.toTheDojo = functions.https.onRequest((req, res) => {
 });
 
 exports.httpsRequest = functions.https.onRequest((req, res) => {
-  const tokenId = req.get("Authorization").split("Bearer")[1];
+  const tokenId = req.get("auth_token");
   if (tokenId) {
     console.log("WHOA");
   }
